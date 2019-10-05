@@ -1,19 +1,12 @@
 #ifndef SERIALIZE_HPP
 #define SERIALIZE_HPP
 
+#include <typeindex>
+#include <unordered_set>
+#include <vector>
 #include "nlohmann/json.hpp"
 
-struct PropertyInitializer {
-  template <typename T>
-  constexpr operator T() const {
-    return T{};
-  }
-
-  template <typename T>
-  T&& operator=(T&& value) const {
-    return std::forward<T>(value);
-  }
-};
+namespace grenewode_serialize {
 
 template <typename U>
 struct base_property {
@@ -36,14 +29,37 @@ struct base_property {
 template <typename T>
 using property_table_type = std::vector<std::unique_ptr<base_property<T>>>;
 
+namespace INTERNAL {
+
+using serializable_registry_type = std::unordered_set<std::type_index>;
+
+serializable_registry_type& serializable_registry();
+
 template <typename T>
-property_table_type<T>& get_property_table() {
-  static property_table_type<T> property_table;
-  return property_table;
+void register_as_serializable() {
+  static auto _just_once = ([] {
+    serializable_registry().insert(typeid(T));
+    return '\0';
+  })();
+}
+template <typename T>
+bool is_registered_as_serializable() {
+  return serializable_registry().count(typeid(T)) > 0;
 }
 
 template <typename T>
-struct is_nlohmann_serializeable {
+property_table_type<T>& get_property_table() {
+  static property_table_type<T> property_table = ([] {
+    register_as_serializable<T>();
+    return property_table_type<T>{};
+  })();
+
+  return property_table;
+}
+}  // namespace INTERNAL
+
+template <typename T>
+struct is_nlohmann_serializable {
  private:
   template <typename U>
   static constexpr auto test(void*)
@@ -57,7 +73,7 @@ struct is_nlohmann_serializeable {
 };
 
 template <typename T>
-struct is_nlohmann_deserializeable {
+struct is_nlohmann_deserializable {
  private:
   template <typename U>
   static constexpr auto test(void*)
@@ -73,12 +89,14 @@ struct is_nlohmann_deserializeable {
 
 template <typename T>
 nlohmann::json serialize(const T& object) {
-  if constexpr (is_nlohmann_serializeable<T>::value) {
+  if constexpr (is_nlohmann_serializable<T>::value) {
     return object;
   } else {
+    assert(INTERNAL::is_registered_as_serializable<T>());
+
     nlohmann::json json;
 
-    auto&& property_table = get_property_table<T>();
+    auto&& property_table = INTERNAL::get_property_table<T>();
 
     for (auto&& entry : property_table) {
       auto v = entry->serialize(object);
@@ -91,12 +109,14 @@ nlohmann::json serialize(const T& object) {
 
 template <typename T>
 T deserialize(const nlohmann::json& j) {
-  if constexpr (is_nlohmann_deserializeable<T>::value) {
+  if constexpr (is_nlohmann_deserializable<T>::value) {
     return j.template get<T>();
   } else {
+    assert(INTERNAL::is_registered_as_serializable<T>());
+
     T object{};
 
-    auto&& property_table = get_property_table<T>();
+    auto&& property_table = INTERNAL::get_property_table<T>();
 
     for (auto&& entry : property_table) {
       entry->deserialize(object, j[entry->name]);
@@ -122,11 +142,25 @@ struct property<MEMBER> : base_property<U> {
   constexpr property& operator=(property&&) = default;
 
   virtual nlohmann::json serialize(const U& object) {
-    return ::serialize(object.*member);
+    return grenewode_serialize::serialize(object.*member);
   }
 
   virtual void deserialize(U& object, const nlohmann::json& in) {
-    object.*member = ::deserialize<T>(in);
+    object.*member = grenewode_serialize::deserialize<T>(in);
+  }
+};
+
+namespace INTERNAL {
+
+struct PropertyInitializer {
+  template <typename T>
+  constexpr operator T() const {
+    return T{};
+  }
+
+  template <typename T>
+  T&& operator=(T&& value) const {
+    return std::forward<T>(value);
   }
 };
 
@@ -152,8 +186,11 @@ PropertyInitializer make_property(const char* name) {
 
   return {};
 }
+}  // namespace INTERNAL
 
-#define SERIALIZE(name) \
-  name = make_property<&std::decay_t<decltype(*this)>::name>(#name)
+#define SERIALIZE(name)                                  \
+  name = ::grenewode_serialize::INTERNAL::make_property< \
+      &std::decay_t<decltype(*this)>::name>(#name)
+}  // namespace grenewode_serialize
 
 #endif

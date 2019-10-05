@@ -1,7 +1,9 @@
 {
     "C_Cpp.default.configurationProvider": "vector-of-bool.cmake-tools",
     "cSpell.words": [
+        "deserializable",
         "destructure",
+        "grenewode",
         "nlohmann"
     ]
 }
