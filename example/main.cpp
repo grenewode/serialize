@@ -3,7 +3,12 @@
 #include "serialize.hpp"
 
 struct Foo {
+ private:
   int SERIALIZE(hello);
+
+ public:
+  int get_hello() const { return hello; }
+
   int SERIALIZE(world) = 60;
 
   std::string SERIALIZE(my_other_field);
@@ -35,7 +40,7 @@ int main() {
     "inner": { "mapping": { "Hello": "World" } }
   })"_json);
 
-  std::cout << "hello: " << de_foo.hello << std::endl
+  std::cout << "hello: " << de_foo.get_hello() << std::endl
             << "world: " << de_foo.world << std::endl
             << "my_other_field: " << de_foo.my_other_field << std::endl
             << "my_other_field_vector: " << de_foo.my_other_field << std::endl;
