@@ -9,6 +9,10 @@ struct Foo {
   std::string SERIALIZE(my_other_field);
   std::vector<std::string> SERIALIZE(my_other_field_vector) = std::vector{
       std::string{"Hello"}, std::string{"World"}};
+
+  struct Inner {
+    std::map<std::string, std::string> SERIALIZE(mapping);
+  } SERIALIZE(inner);
 };
 
 struct Bar {
@@ -19,13 +23,16 @@ struct Bar {
 int main() {
   Foo foo;
   foo.my_other_field = "THis is still a test";
+  foo.inner.mapping["Hello"] = "World";
+
   std::cout << grenewode_serialize::serialize(foo).dump(1) << std::endl;
 
   auto de_foo = grenewode_serialize::deserialize<Foo>(R"({
     "hello": 15,
     "world": -5,
     "my_other_field": "Hello World THIS IS A TEST!",
-    "my_other_field_vector": ["Goodbye", "World"]
+    "my_other_field_vector": ["Goodbye", "World"],
+    "inner": { "mapping": { "Hello": "World" } }
   })"_json);
 
   std::cout << "hello: " << de_foo.hello << std::endl
@@ -36,5 +43,5 @@ int main() {
   // Bar does not contain any serializable fields, so it will throw an exception
   // if you try to serialize it
 
-  std::cout << grenewode_serialize::serialize(Bar{}).dump(1) << std::endl;
+  // std::cout << grenewode_serialize::serialize(Bar{}).dump(1) << std::endl;
 }
