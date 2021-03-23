@@ -5,5 +5,7 @@
         "destructure",
         "grenewode",
         "nlohmann"
-    ]
+    ],
+    "clangd.path": "/nix/store/v8gdgd5pcxsk6hvx0g22h29py3yxj8hy-clang-11.0.0/bin/clangd",
+    "clangd.onConfigChanged": "restart"
 }

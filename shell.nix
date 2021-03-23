@@ -1,5 +1,8 @@
+{ nixpkgs ? <nixpkgs>
+, system ? builtins.currentSystem
+}:
 let
-  pkgs = import <nixpkgs> { };
+  pkgs = import nixpkgs { };
   llvmPackages = pkgs.llvmPackages_11;
   stdenv = llvmPackages.stdenv;
   cmake = pkgs.cmake.overrideAttrs (
@@ -35,7 +38,28 @@ let
       description = "cmakelint parses CMake files and reports style issues.";
     };
   };
-  gcc = pkgs.gcc10;
+  misc-nix = import
+    (pkgs.fetchFromGitHub {
+      owner = "grenewode";
+      repo = "misc-nix";
+      rev = "trunk";
+      hash = "sha256:03cydq4p9w6c6i75m9dpdgkin4abr34v0xjaxyq4fir741xvdpgh";
+    })
+    { inherit nixpkgs system; };
+  compdb =
+    with pkgs.python3Packages;
+    buildPythonApplication rec {
+      pname = "compdb";
+      version = "0.2.0";
+
+      src = fetchPypi {
+        inherit pname version;
+
+        hash = "sha256:1pbr5f8b3mvcf7sksa7f4ql9q2ag046lwfpv2v46jphys2ninivk";
+      };
+
+      doCheck = false;
+    };
 in
 stdenv.mkDerivation {
 
@@ -47,6 +71,8 @@ stdenv.mkDerivation {
     clang-analyzer
     cmakelint
     clang-tools
+    misc-nix.neovim
+    compdb
   ];
 
   CXX = "${clang-analyzer}/libexec/scan-build/c++-analyzer";
