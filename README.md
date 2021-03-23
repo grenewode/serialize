@@ -1,4 +1,4 @@
-# Simple proof of concept for C++17 serialization
+# Simple proof of concept for C++20 serialization
 
 This example is built on top of [nlohmann json](https://github.com/nlohmann/json), and provides a moderately lightweight solution for registering members of serializable objects.
 
