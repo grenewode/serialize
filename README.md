@@ -1,5 +1,7 @@
 # Simple proof of concept for C++20 serialization
 
+![build status](https://github.com/grenewode/serialize/actions/workflows/cmake.yml/badge.svg)
+
 This example is built on top of [nlohmann json](https://github.com/nlohmann/json), and provides a moderately lightweight solution for registering members of serializable objects.
 
 This system has the following drawbacks, however:
